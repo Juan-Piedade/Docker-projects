@@ -1,0 +1,31 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: JuanBackend:1.0
+    ports:
+      - "4000:4000"
+    environment:
+      JWT_SECRET: sua_chave_secreta_aqui
+    volumes:
+      - ./backend:/app
+      - ./backend/auth_demo.db:/app/auth_demo.db
+
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: JuanFrontend:1.0
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  database:
+    image: mysql:9.3.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: auth_demo
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
