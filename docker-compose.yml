@@ -1,31 +1,42 @@
 services:
+  db:
+    image: mysql:8.0
+    container_name: mysql-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: auth_db
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./backend/src/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    image: JuanBackend:1.0
+    build: ./backend
+    container_name: backend-api
+    restart: always
+    env_file:
+      - ./backend/.env
     ports:
       - "4000:4000"
-    environment:
-      JWT_SECRET: sua_chave_secreta_aqui
-    volumes:
-      - ./backend:/app
-      - ./backend/auth_demo.db:/app/auth_demo.db
+    depends_on:
+      - db
+    networks:
+      - app-network
 
   frontend:
-    build: 
-      context: ./frontend
-      dockerfile: Dockerfile
-    image: JuanFrontend:1.0
+    build: ./frontend
+    container_name: frontend-app
     ports:
-      - "3000:3000"
+      - "5173:5173"
     depends_on:
       - backend
+    networks:
+      - app-network
 
-  database:
-    image: mysql:9.3.0
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: auth_demo
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+volumes:
+  db_data:
+
+networks:
+  app-network:

@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const mysql = require('mysql');
 require('dotenv').config();
 
-const app = express();
+const App = express();
 app.use(express.json());
 
 const db = mysql.createConnection({
@@ -51,3 +51,46 @@ function verifyToken(req, res, next) {
 }
 
 app.listen(5000, () => console.log('Backend rodando na porta 5000'));
+const express = require("express");
+const cors = require("cors");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const pool = require("./db/connection");
+require("dotenv").config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+app.post("/api/register", async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const [existing] = await pool.query("SELECT * FROM users WHERE email = ?", [email]);
+    if (existing.length > 0) return res.status(400).json({ message: "Usuário já existe" });
+
+    const hashed = await bcrypt.hash(password, 10);
+    await pool.query("INSERT INTO users (email, password) VALUES (?, ?)", [email, hashed]);
+    res.status(201).json({ message: "Usuário criado com sucesso" });
+  } catch (err) {
+    res.status(500).json({ message: "Erro interno" });
+  }
+});
+
+app.post("/api/login", async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const [users] = await pool.query("SELECT * FROM users WHERE email = ?", [email]);
+    const user = users[0];
+    if (!user) return res.status(400).json({ message: "Credenciais inválidas" });
+
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(400).json({ message: "Credenciais inválidas" });
+
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    res.json({ token });
+  } catch (err) {
+    res.status(500).json({ message: "Erro interno" });
+  }
+});
+
+app.listen(process.env.PORT, () => console.log("API rodando na porta " + process.env.PORT));
